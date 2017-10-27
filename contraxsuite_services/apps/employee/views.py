@@ -42,7 +42,7 @@ __email__ = "support@contraxsuite.com"
 class EmployeeListView(JqPaginatedListView):
     model = Employee
     json_fields = ['document__pk', 'document__name', 'document__description',
-                   'document__document_type', 'name', 'salary', 'title', 'effective_date',
+                   'document__document_type', 'name', 'annual_salary', 'salary_currency', 'effective_date',
                    'employer__name']
     field_types = dict(count=int)
 

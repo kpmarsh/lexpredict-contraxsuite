@@ -4,7 +4,7 @@ from django.contrib import admin
 from apps.employee.models import (Employee, Employer)
 
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'salary')
+    list_display = ('name', 'annual_salary')
     search_fields = ('name',)
 
 class EmployerAdmin(admin.ModelAdmin):

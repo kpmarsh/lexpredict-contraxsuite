@@ -7,6 +7,7 @@ class Employer(models.Model):
 
     name = models.CharField(max_length=1024, db_index=True)
 
+
     def __str__(self):
         return "Employer: %s" % self.name
 
@@ -15,9 +16,10 @@ class Employee(models.Model):
 
     document = models.ForeignKey(Document, db_index=True)
     name= models.CharField(max_length=1024, db_index=True)
-    employer=models.ForeignKey(Employer, db_index=True)
-    salary= models.FloatField()
-    effective_date= models.DateField(null=True)
+    employer=models.ForeignKey(Employer, db_index=True, blank=True, null=True)
+    annual_salary= models.FloatField(blank=True, null=True)
+    salary_currency= models.CharField(max_length=10, blank=True, null=True)
+    effective_date= models.DateField(blank=True, null=True)
 
 
     class Meta:

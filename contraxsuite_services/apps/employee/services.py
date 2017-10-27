@@ -10,6 +10,8 @@ from lexnlp.extract.en.entities.nltk_re import get_parties_as
 from lexnlp.extract.en.utils import strip_unicode_punctuation
 from sklearn.metrics.pairwise import cosine_similarity
 
+
+
 TRIGGER_LIST_COMPANY = ["corporation", "company", "employer"]
 TRIGGER_LIST_EMPLOYEE = ["employee", "executive"]
 non_compete_samples=["""(b) Noncompetition. The Executive agrees that during the period of the Executive’s employment with the Company, the period, if any, during which the Executive is receiving payments from the Company pursuant to Section 4, and for a period of two years thereafter the Executive shall not in any manner, directly or indirectly, through any person, firm or corporation, alone or as a member of a partnership or as an officer, director, stockholder, investor or employee of or consultant or other agent to any other corporation or enterprise or otherwise, engage or be engaged, or assist any other person, firm, corporation or enterprise in engaging or being engaged, in any business, in which the Executive was involved or had knowledge, being conducted by, or contemplated by, the Company or any of its subsidiaries as of the termination of the Executive’s employment in any geographic area in which the Company, any of its subsidiaries or the Parent is then conducting or is contemplating conducting such business.""",
@@ -19,13 +21,15 @@ non_compete_samples=["""(b) Noncompetition. The Executive agrees that during the
                      """8.1 The Employee, recognizing the high level of trust and authority and the unique access to Company Proprietary Information to which he is being afforded by the Company, in exchange covenants and agrees that he will not during the term of employment and for a period of one year thereafter, on behalf of himself or on behalf of any other person or business entity or enterprise directly or indirectly as an employee, proprietor, stockholder, partner, consultant or otherwise, engage in any business or activity competitive with the business activities or the Company or its affiliates as they now are or hereafter undertaken by the Company.""",
                      """(a) Employee acknowledges that in the course of her employment by the Company he has and will become privy to various economic and trade secrets and relationships of the Company and its subsidiaries under its direct control ("Subsidiaries"). Therefore, in consideration of this Agreement, Employee hereby agrees that he will not, directly or indirectly, except for the benefit of the Company or its Subsidiaries, or with the prior written consent of the Board of Directors of the Company, which consent may be granted or withheld at the sole discretion of the Company's Board of Directors: (i) During the Noncompetition Period (as hereinafter defined), become an officer, director, stockholder, partner, member, manager, associate, employee, owner, creditor, independent contractor, co- venturer, consultant or otherwise, or be interested in or associated with any other person, corporation, firm or business engaged in providing software solutions services, including but not limited to, systems integration, custom software development, training, systems support, outsourcing and/or information technology consulting services (an "Edgewater Services Business") within a radius of fifty (50) miles from any office operated during the Noncompetition Period by the Company, or any of its Subsidiaries (collectively, the "Territory") or in any Edgewater Services Business directly competitive with that of the Company, or any of its Subsidiaries, or itself engage in such business; provided, however, that"""]
 
+#TODO Should return a flag if find more than one of anything and add some kind of "conflicting" flag for every employee value so user knows suspicious values
 
 # Employee or Executive is found as a definition in the sentence
 # there is a person (get_persons) who is not also a company - that is the employee
+# Return list of all potential "Employees"
 def get_employee_name(text, return_source=False):
     definitions = list(get_definitions(text))
 
-    found_employees = []
+    found_employee = None
     defined_employee_found = False
     for d in definitions:
         if d.lower() in TRIGGER_LIST_EMPLOYEE:
@@ -48,17 +52,19 @@ def get_employee_name(text, return_source=False):
                     person_is_a_company = True
                     break
             if (not person_is_a_company):
-                found_employees.append(p)
+                found_employee=str(p)
+                break #take first person found meeting our employee criteria
 
     if (return_source):
-        yield (found_employees, text)
+        return (found_employee, text)
     else:
-        yield found_employees
+        return found_employee
 
 
 # Case 1 Find definition of employee and employer in sentence return company found.
 # this doesn't handle more than one company in the same employee/employer definition sentence
-def get_employer_name(text, return_source=False):
+# First instance of this is fine since this is generally the first sentence
+def get_employer_name(text, return_source=False, return_conflict=False):
     definitions = list(get_definitions(text))
 
     companies = []
@@ -75,56 +81,54 @@ def get_employer_name(text, return_source=False):
 
     if (defined_employer_found and defined_employee_found):
         companies = list(get_companies(text))
+        first_company_string= ', '.join(str(s) for s in companies[0]) #take first employer found
 
     if (return_source):
-        yield (companies, text)
+        return (first_company_string, text)
     else:
-        yield companies
+        return first_company_string
 
 #TODO- group parts of sentence so can separate when it is like this:
 # "Your bi-weekly rate of pay will be $7,403.85, which is the equivalent of an annual rate of $192,500, based on a 40-hour workweek."
-def get_salary(text, return_source=False):
+def get_salary(text, return_source=False, return_conflict=False):
     TRIGGER_LIST_SALARY = ["salary", "rate of pay"]
     # text to be found and multiplier to get yearly
-    TRIGGER_LIST_TIME_UNIT = [("per annum", 1), ("yearly", "1"), ("per year", "1"),
-                              ("bi-weekly", "26"), ("monthly", "12")]
-    found_time_unit = 0
-    money=[]
+    TRIGGER_LIST_TIME_UNIT = [("per annum", 1), ("yearly", 1), ("per year", 1),
+                              ("bi-weekly", 26), ("monthly", 12)]
+    found_time_unit = False
+    money=None
     for t in TRIGGER_LIST_TIME_UNIT:
         if (findWholeWordorPhrase(t[0])(text)) is not None:
             found_time_unit = t[1]
             break
 
     if (found_time_unit):
-        money = get_money(text)
-    if (return_source):
-        yield (money, found_time_unit, text)
-    else:
-        yield (money, found_time_unit)
+        money = list(get_money(text))[0] #took just the first time unit- so also just take first money
+    if money is not None:
+        if (return_source):
+            return (money, found_time_unit, text)
+        else:
+            return (money, found_time_unit)
 
-def get_effective_date(text, return_source=False):
-    # Trigger List Start Date should be followed by the start of the date as picked up by get_dates
-    TRIGGER_LIST_START_DATE=["dated as of", "effective as of"]
-    EXCLUDE_LIST_START_DATE=["amends"]
+def get_effective_date(text, return_source=False, return_conflict=False):
+    # need a better more accurate way of doing this
+    # right now looks for triggers and takes latest date in that sentence
+    TRIGGER_LIST_START_DATE=["dated as of", "effective as of", "made as of", "entered into as of"]
     found_start_date_trigger= False
-    found_start_date_excluder=False
-    dates=[]
+    effective_date=None
 
     for t in TRIGGER_LIST_START_DATE:
         if findWholeWordorPhrase(t)(text) is not None:
             found_start_date_trigger=True
             break
-    for e in EXCLUDE_LIST_START_DATE:
-        if findWholeWordorPhrase(e)(text) is not None:
-            found_start_date_excluder=True
-            break
 
-    if (found_start_date_trigger and not found_start_date_excluder):
-        dates = get_dates(text)
+    if (found_start_date_trigger):
+        dates = list(get_dates(text))
+        effective_date= max(dates)
     if(return_source):
-        yield (dates, text)
+        return (effective_date, text)
     else:
-        yield(dates)
+        return(effective_date)
 
 
 #def check_is_non_compete(text_unit, sample_set=non_compete_samples, similarity_threshold=.75):
@@ -137,6 +141,49 @@ def findWholeWordorPhrase(w):
 
 
 
-#text = """This Amendment, dated as of March 9, 2004, amends the Employment Agreement, entered into as of March 11, 2000 and amended as of November 20, 2002 (as so amended, the "Agreement"), by and between Joseph R. Martin (the "Executive") and Fairchild Semiconductor Corporation, a Delaware corporation (the "Corporation”)"""
-#p = list(get_effective_date(text))
-#print(p)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

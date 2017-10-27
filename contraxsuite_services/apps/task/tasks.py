@@ -34,6 +34,7 @@ from tika import parser
 from celery import shared_task
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
+from celery.contrib import rdb
 
 # Scikit-learn imports
 from sklearn.cluster import Birch, DBSCAN, KMeans, MiniBatchKMeans
@@ -2278,28 +2279,35 @@ class LocateEmployees(BaseTask):
             # clean
             text = text.replace('[', '(').replace(']', ')')
             # get values not yet found. This logic assumes only one of each of these values found per document.
-            #if there is more than one it will only pick up the first
+            # if there is more than one it will only pick up the first
             if employee_dict.get('name') is None:
                 employee_dict['name'] = get_employee_name(text)
             if employee_dict.get('employer') is None:
                 employee_dict['employer'] = get_employer_name(text)
-            if employee_dict.get('salary') is None:
-                employee_dict['salary'] = get_salary(text)
+            if employee_dict.get('annual_salary') is None:
+                get_salary_result = get_salary(text)
+                if get_salary_result is not None:
+                    employee_dict['annual_salary'] = get_salary_result[0][0] * get_salary_result[1]
+                    employee_dict['salary_currency'] = get_salary_result[0][1]
             if employee_dict.get('effective_date') is None:
                 employee_dict['effective_date'] = get_effective_date(text)
+            return employee_dict
 
         employee = employer = None
         # create Employee only if his/her name exists
         if employee_dict.get('name') is not None:
             employee, ee_created = Employee.objects.get_or_create(
                 name=employee_dict['name'],
-                salary=employee_dict.get('salary'))
+                annual_salary=employee_dict.get('annual_salary'),
+                salary_currency=employee_dict.get('salary_currency'),
+                effective_date= employee_dict.get('effective_date')
+                )
 
         # create Employer
         if employee and employee_dict.get('employer') is not None:
             employer, er_created = Employer.objects.get_or_create(name=employee_dict['employer'])
 
-        if employee and employer and not amployee.employer:
+        if employee and employer and not employee.employer:
             employee.employer = employer
             employee.save()
 
@@ -2391,3 +2399,4 @@ def purge_task(task_pk):
     ret = 'Deleted task, celery task, %d children celery tasks.' % children_tasks_no
     log(ret)
     return {'message': ret, 'status': 'success'}
+
