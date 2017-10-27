@@ -16,7 +16,6 @@ class Employee(models.Model):
     document = models.ForeignKey(Document, db_index=True)
     name= models.CharField(max_length=1024, db_index=True)
     employer=models.ForeignKey(Employer, db_index=True)
-    title= models.CharField(max_length=1024, db_index=True)#TODO- determine if you can actually get this or delete this from model
     salary= models.FloatField()
     effective_date= models.DateField(null=True)
 
@@ -30,9 +29,8 @@ class Employee(models.Model):
         return "Employee (" \
                "doc_id= {0}," \
                "name={0}," \
-               "title={1}," \
                "salary={2})" \
-            .format(self.document.id, self.name, self.title, self.salary)
+            .format(self.document.id, self.name, self.salary)
 
 
 
