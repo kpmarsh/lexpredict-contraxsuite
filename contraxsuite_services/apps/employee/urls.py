@@ -42,11 +42,6 @@ urlpatterns += [
         r'^employee/list/$',
         views.EmployeeListView.as_view(),
         name='employee-list',
-    ),
-    url(
-        r'^employer/list/$',
-        views.EmployerListView.as_view(),
-        name='employer-list',
-    ),
+    )
 
 ]

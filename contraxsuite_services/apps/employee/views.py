@@ -41,8 +41,8 @@ __email__ = "support@contraxsuite.com"
 
 class EmployeeListView(JqPaginatedListView):
     model = Employee
-    json_fields = ['document__pk', 'document__name', 'document__description',
-                   'document__document_type', 'name', 'annual_salary', 'salary_currency', 'effective_date',
+    json_fields = ['employee__document__pk', 'employee__document__name', 'employee__document__description',
+                   'employee__document__document_type', 'name', 'annual_salary', 'salary_currency', 'effective_date',
                    'employer__name']
     field_types = dict(count=int)
 
@@ -51,7 +51,7 @@ class EmployeeListView(JqPaginatedListView):
         for item in data['data']:
             item['employee_url'] = '#'
             item['url'] = reverse('document:document-detail',
-                                  args=[item['document__pk']])
+                                  args=[item['employee__document__pk']])
         return data
 
     def get_queryset(self):

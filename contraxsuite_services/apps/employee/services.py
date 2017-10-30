@@ -49,9 +49,10 @@ def get_employee_name(text, return_source=False):
                                               + c[1].lower().strip(string.punctuation).replace(" ", "").replace(",",
                                                                                                                 ""))
                     employee_full_string = str(p.lower().strip(string.punctuation).replace(" ", "").replace(",", ""))
-                    if (employee_full_string == company_full_string):
-                        person_is_a_company = True
-                        break
+                    if (employee_full_string == company_full_string or
+                        #handle this- where get_companies picks up more surrounding text than get_persons: EMPLOYMENT AGREEMENT WHEREAS, Kensey Nash Corporation, a Delaware corporation (the “Company”) and Todd M. DeWitt (the “Executive”) entered into that certain Amended and Restated Employment Agreement,...
+                        employee_full_string in company_full_string):
+                            person_is_a_company = True
             if (not person_is_a_company):
                 found_employee=str(p)
                 break #take first person found meeting our employee criteria
@@ -129,7 +130,7 @@ def get_effective_date(text, return_source=False, return_conflict=False):
 
     if (found_start_date_trigger):
         dates = list(get_dates(text))
-        if len(dates >0):
+        if len(dates) >0:
             effective_date= max(dates)
     if(return_source):
         return (effective_date, text)
@@ -145,8 +146,10 @@ def findWholeWordorPhrase(w):
     w = w.replace(" ", r"\s+")
     return re.compile(r'\b({0})\b'.format(w), flags=re.IGNORECASE).search
 
-#text="""Your bi-weekly rate of pay will be $7,403.85,
-#which is the equivalent of an annual rate of $192,500, based on a 40-hour workweek."""
-#result= get_salary(text)
-#annual_salary=result[0][0] * result[1]
-#print(annual_salary, type(annual_salary))
+#text="""EMPLOYMENT AGREEMENT WHEREAS, Kensey Nash Corporation,
+#a Delaware corporation (the “Company”) and Todd M. DeWitt (the “Executive”)
+#entered into that certain Amended and Restated Employment Agreement, entered into as of January 1, 2009
+#(as amended, restated, supplemented, extended or otherwise modified and in effect, the “Agreement”);"""
+#result= get_employee_name(text)
+##annual_salary=result[0][0] * result[1]
+#print(result, type(result))
