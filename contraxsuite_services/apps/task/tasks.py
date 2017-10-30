@@ -1087,7 +1087,7 @@ class LocateParties(BaseTask):
         self.log('Found {0} Documents. Added {0} subtasks.'.format(self.task.subtasks_total))
 
         for d in Document.objects.all():
-            self.parse_document.apply_async(args=(d.id,),
+            self.parse_document.apply_async(args=(d.id, ),
                                             task_id='%d_%s' % (self.task.id, fast_uuid()))
 
     @staticmethod
@@ -2262,7 +2262,7 @@ class LocateEmployees(BaseTask):
         self.log('Found {0} Documents. Added {0} subtasks.'.format(self.task.subtasks_total))
 
         for d in Document.objects.all():
-            self.parse_document_for_employee.apply_async(args=(d.id,),
+            self.parse_document_for_employee.apply_async(args=(d.id, ),
                                                          task_id='%d_%s' % (self.task.id, fast_uuid()))
 
     @staticmethod
@@ -2271,7 +2271,7 @@ class LocateEmployees(BaseTask):
 
         employee_dict= {}
 
-        for t in TextUnit.objects.filter(document_id=document_id, unit_type="sentence").all():
+        for t in TextUnit.objects.filter(document_id=document_id, unit_type="paragraph").all():
             text = t.text
             # skip if all text in uppercase
             if text == text.upper():
@@ -2279,7 +2279,7 @@ class LocateEmployees(BaseTask):
             # clean
             text = text.replace('[', '(').replace(']', ')')
             # get values not yet found. This logic assumes only one of each of these values found per document.
-            # if there is more than one it will only pick up the first
+            # if there is more than one it will only pick up the first (except effective date)
             if employee_dict.get('name') is None:
                 employee_dict['name'] = get_employee_name(text)
             if employee_dict.get('employer') is None:
@@ -2291,7 +2291,13 @@ class LocateEmployees(BaseTask):
                     employee_dict['salary_currency'] = get_salary_result[0][1]
             if employee_dict.get('effective_date') is None:
                 employee_dict['effective_date'] = get_effective_date(text)
-            return employee_dict
+            if employee_dict.get('name') is not None\
+                and employee_dict.get('employer') is not None\
+                and employee_dict.get('annual_salary') is not None\
+                and employee_dict.get('effective_date') is not None:
+                break;
+
+
 
         employee = employer = None
         # create Employee only if his/her name exists
@@ -2300,7 +2306,8 @@ class LocateEmployees(BaseTask):
                 name=employee_dict['name'],
                 annual_salary=employee_dict.get('annual_salary'),
                 salary_currency=employee_dict.get('salary_currency'),
-                effective_date= employee_dict.get('effective_date')
+                effective_date= employee_dict.get('effective_date'),
+                document= Document.objects.get(pk=document_id)
                 )
 
         # create Employer

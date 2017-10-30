@@ -44,13 +44,14 @@ def get_employee_name(text, return_source=False):
             for c in companies:
                 # persons and companies return slightly different values for same text
                 # so need to standardize to compare
-                company_full_string = str(c[0].lower().strip(string.punctuation).replace(" ", "").replace(",", "")
-                                          + c[1].lower().strip(string.punctuation).replace(" ", "").replace(",",
-                                                                                                            ""))
-                employee_full_string = str(p.lower().strip(string.punctuation).replace(" ", "").replace(",", ""))
-                if (employee_full_string == company_full_string):
-                    person_is_a_company = True
-                    break
+                if(len(c)>1):
+                    company_full_string = str(c[0].lower().strip(string.punctuation).replace(" ", "").replace(",", "")
+                                              + c[1].lower().strip(string.punctuation).replace(" ", "").replace(",",
+                                                                                                                ""))
+                    employee_full_string = str(p.lower().strip(string.punctuation).replace(" ", "").replace(",", ""))
+                    if (employee_full_string == company_full_string):
+                        person_is_a_company = True
+                        break
             if (not person_is_a_company):
                 found_employee=str(p)
                 break #take first person found meeting our employee criteria
@@ -70,6 +71,7 @@ def get_employer_name(text, return_source=False, return_conflict=False):
     companies = []
     defined_employer_found = False
     defined_employee_found = False
+    first_company_string=None
 
     for d in definitions:
         if d.lower() in TRIGGER_LIST_COMPANY:
@@ -81,7 +83,8 @@ def get_employer_name(text, return_source=False, return_conflict=False):
 
     if (defined_employer_found and defined_employee_found):
         companies = list(get_companies(text))
-        first_company_string= ', '.join(str(s) for s in companies[0]) #take first employer found
+        if(len(companies)>0):
+            first_company_string= ', '.join(str(s) for s in companies[0]) #take first employer found
 
     if (return_source):
         return (first_company_string, text)
@@ -103,7 +106,9 @@ def get_salary(text, return_source=False, return_conflict=False):
             break
 
     if (found_time_unit):
-        money = list(get_money(text))[0] #took just the first time unit- so also just take first money
+        found_money= list(get_money(text))
+        if(len(found_money)>0):
+            money = found_money[0] #took just the first time unit- so also just take first money
     if money is not None:
         if (return_source):
             return (money, found_time_unit, text)
@@ -124,7 +129,8 @@ def get_effective_date(text, return_source=False, return_conflict=False):
 
     if (found_start_date_trigger):
         dates = list(get_dates(text))
-        effective_date= max(dates)
+        if len(dates >0):
+            effective_date= max(dates)
     if(return_source):
         return (effective_date, text)
     else:
@@ -139,51 +145,8 @@ def findWholeWordorPhrase(w):
     w = w.replace(" ", r"\s+")
     return re.compile(r'\b({0})\b'.format(w), flags=re.IGNORECASE).search
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#text="""Your bi-weekly rate of pay will be $7,403.85,
+#which is the equivalent of an annual rate of $192,500, based on a 40-hour workweek."""
+#result= get_salary(text)
+#annual_salary=result[0][0] * result[1]
+#print(annual_salary, type(annual_salary))
