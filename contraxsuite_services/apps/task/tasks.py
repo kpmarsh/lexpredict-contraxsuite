@@ -68,8 +68,8 @@ from apps.extract.models import (
     Court, CourtUsage, CurrencyUsage, RegulationUsage,
     CitationUsage, DateDurationUsage, DateUsage, DefinitionUsage)
 
-from apps.employee.models import Employee, Employer
-from apps.employee.services import get_employee_name, get_employer_name, get_salary, get_effective_date
+from apps.employee.models import Employee, Employer, Noncompete_Provision
+from apps.employee.services import get_employee_name, get_employer_name, get_salary, get_effective_date, get_similar_to_non_compete
 
 from apps.task.celery import app
 from apps.task.models import Task
@@ -2254,7 +2254,7 @@ class LocateEmployees(BaseTask):
         :return:
         """
         if kwargs['delete']:
-            deleted = Employee.objects.all().delete()
+            deleted = Employee.objects.all().delete() + Employer.objects.all().delete() + Noncompete_Provision.objects.all().delete()
             self.log('Deleted: ' + str(deleted))
 
         self.task.subtasks_total = Document.objects.count()
@@ -2270,6 +2270,7 @@ class LocateEmployees(BaseTask):
     def parse_document_for_employee(document_id):
 
         employee_dict= {}
+        non_compete_list=[]
 
         for t in TextUnit.objects.filter(document_id=document_id, unit_type="paragraph").all():
             text = t.text
@@ -2291,12 +2292,10 @@ class LocateEmployees(BaseTask):
                     employee_dict['salary_currency'] = get_salary_result[0][1]
             if employee_dict.get('effective_date') is None:
                 employee_dict['effective_date'] = get_effective_date(text)
-            if employee_dict.get('name') is not None\
-                and employee_dict.get('employer') is not None\
-                and employee_dict.get('annual_salary') is not None\
-                and employee_dict.get('effective_date') is not None:
-                break;
 
+            non_compete_similarity=get_similar_to_non_compete(text)
+            if non_compete_similarity >.75:
+                non_compete_list.append({"text_unit":text, "similarity":non_compete_similarity})
 
 
         employee = employer = None
@@ -2310,9 +2309,19 @@ class LocateEmployees(BaseTask):
                 document= Document.objects.get(pk=document_id)
                 )
 
+        if len(non_compete_list)>0 and employee is not None:
+            for i in non_compete_list:
+                non_compete, non_compete_created = Noncompete_Provision.objects.get_or_create(
+                    text_unit=i["text_unit"],
+                    similarity=i["similarity"],
+                    employee=employee,
+                    document=Document.objects.get(pk=document_id)
+                )
+
         # create Employer
         if employee and employee_dict.get('employer') is not None:
             employer, er_created = Employer.objects.get_or_create(name=employee_dict['employer'])
+
 
         if employee and employer and not employee.employer:
             employee.employer = employer
