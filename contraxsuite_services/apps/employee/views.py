@@ -26,10 +26,13 @@ from apps.common.mixins import (
     AjaxListView, AjaxResponseMixin, JqPaginatedListView, TypeaheadView)
 from apps.document.models import Document
 from apps.employee.models import (
-    Employee, Employer)
+    Employee, Employer, EmployerUsage)
 from apps.task.views import BaseAjaxTaskView, LocateTaskView
 from apps.task.models import Task
 from apps.task.tasks import call_task, clean_tasks, purge_task
+from apps.common.mixins import (
+    AjaxListView, CustomUpdateView, CustomCreateView, CustomDeleteView,
+    JqPaginatedListView, PermissionRequiredMixin, SubmitView, TypeaheadView)
 
 __author__ = "ContraxSuite, LLC; LexPredict, LLC"
 __copyright__ = "Copyright 2015-2017, ContraxSuite, LLC"
@@ -41,17 +44,16 @@ __email__ = "support@contraxsuite.com"
 
 class EmployeeListView(JqPaginatedListView):
     model = Employee
-    json_fields = ['employee__document__pk', 'employee__document__name', 'employee__document__description',
-                   'employee__document__document_type', 'name', 'annual_salary', 'salary_currency', 'effective_date',
+    json_fields = ['document__pk', 'document__name', 'document__description',
+                   'document__document_type', 'name', 'annual_salary', 'salary_currency', 'effective_date',
                    'employer__name']
     field_types = dict(count=int)
 
     def get_json_data(self, **kwargs):
         data = super().get_json_data()
         for item in data['data']:
-            item['employee_url'] = '#'
-            item['url'] = reverse('document:document-detail',
-                                  args=[item['employee__document__pk']])
+            item['detail_url'] = reverse('employee:employee-detail', args=[item['pk']])
+            item['url'] = reverse('document:document-detail', args=[item['document__pk']])
         return data
 
     def get_queryset(self):
@@ -68,31 +70,26 @@ class EmployeeListView(JqPaginatedListView):
         return ctx
 
 
-class EmployerListView(JqPaginatedListView):
-    model = Employee
-    json_fields = ['name']
+class EmployerUsageListView(JqPaginatedListView):
+    model = EmployerUsage
+    template_name="employee/employer_usage_list.html"
+    json_fields = ['name', 'count']
     field_types = dict(count=int)
 
     def get_json_data(self, **kwargs):
         data = super().get_json_data()
-        for item in data['data']:
-            item['url'] =  '#'
         return data
 
-    def get_queryset(self):
-        qs = super().get_queryset()
-        term_search = self.request.GET.get("employer_search", "")
+class EmployeeDetailView(PermissionRequiredMixin, DetailView):
+    model = Employee
+    template_name = "employee/employee_detail.html"
+    raise_exception = True
 
-        if term_search:
-            qs = self.filter(term_search, qs,
-                             _or_lookup='employer__employer__exact')
-
-        # filter out duplicated Terms (equal terms, but diff. term sources)
-        # qs = qs.order_by('term__term').distinct('term__term', 'text_unit__pk')
-        return qs
+    def has_permission(self):
+        return self.request.user.can_view_document(self.get_object().document)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx['employer_search'] = self.request.GET.get("employer_search", "")
-        return ctx
+        employee = self.object
 
+        return ctx

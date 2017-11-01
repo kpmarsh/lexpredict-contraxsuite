@@ -1,5 +1,7 @@
 import regex as re
 import string
+import gensim.models.word2vec
+import os
 
 # from lexnlp.extract.en.money import get_money
 from lexnlp.extract.en.definitions import get_definitions
@@ -9,18 +11,15 @@ from lexnlp.extract.en.dates import get_dates, get_date_features
 from lexnlp.extract.en.entities.nltk_re import get_parties_as
 from lexnlp.extract.en.utils import strip_unicode_punctuation
 from sklearn.metrics.pairwise import cosine_similarity
+from lexnlp.nlp.en.tokens import get_stems
+from django.conf import settings
 
 
 
 TRIGGER_LIST_COMPANY = ["corporation", "company", "employer"]
 TRIGGER_LIST_EMPLOYEE = ["employee", "executive"]
-non_compete_samples=["""(b) Noncompetition. The Executive agrees that during the period of the Executive’s employment with the Company, the period, if any, during which the Executive is receiving payments from the Company pursuant to Section 4, and for a period of two years thereafter the Executive shall not in any manner, directly or indirectly, through any person, firm or corporation, alone or as a member of a partnership or as an officer, director, stockholder, investor or employee of or consultant or other agent to any other corporation or enterprise or otherwise, engage or be engaged, or assist any other person, firm, corporation or enterprise in engaging or being engaged, in any business, in which the Executive was involved or had knowledge, being conducted by, or contemplated by, the Company or any of its subsidiaries as of the termination of the Executive’s employment in any geographic area in which the Company, any of its subsidiaries or the Parent is then conducting or is contemplating conducting such business.""",
-                     """(ii) During the Noncompetition Period, in the Territory, solicit, cause or authorize, directly or indirectly, to be solicited for or on behalf of herself or third parties, from parties who are or were customers of the Company or its Subsidiaries, any Edgewater Services Business transacted by or with such customer by the Company or its Subsidiaries; or""",
-                     """employ of Aleris, the Company or its affiliates, or solicit, hire or engage on behalf of himself or any other Person (as defined below) any employee of Aleris or the Company or anyone who was employed by Aleris or the Company during the six-month period preceding such hiring or engagement. 8. Confidentiality; Non-Compete; Non-Disclosure; Non-Disparagement. (a) The Executive hereby agrees that, during the Employment Period and thereafter, he will hold in strict confidence any proprietary or Confidential Information related to Aleris, the Company and its affiliates. For purposes of this Agreement, the term “Confidential Information” shall mean all information of Aleris, the Company or any of its affiliates (in whatever form) which is not generally known to the public, including without limitation any inventions, processes, methods of distribution, customer lists or customers’ or trade secrets. (b) The Executive and the Company agree that Aleris, the Company and its affiliates would likely suffer significant harm from the Executive’s competing with Aleris, the Company or its affiliates during the Employment Period and for some period of time thereafter. Accordingly, the Executive agrees that he will not, during the Employment Period and for a period of twelve months following the termination of the Employment Period, directly or indirectly, become employed by, engage in business with, serve as an agent or consultant to, become a partner, member, principal, stockholder or other owner (other than a holder of less than 1% of the outstanding voting shares of any publicly held company) of, any Person competitive with, or otherwise perform services relating to, the business of Aleris, the Company or its affiliates at the time of the termination for any Person (the “Business”) (whether or not for compensation). For purposes of this Agreement, the term “Person” shall mean any individual, partnership, corporation, limited liability company, unincorporated organization, trust or joint venture, or a governmental agency or political subdivision thereof that is engaged in the Business, or otherwise competes with Aleris, the Company or its affiliates, anywhere in which Aleris, the Company or its affiliates engage in or intend to engage in the Business or where Aleris, the Company or its affiliates’ customers are located. (c) The Executive hereby agrees that, upon the termination of the Employment Period, he shall not take, without the prior written consent of the Company, any drawing, blueprint, specification or other document (in whatever form) of the Company or its affiliates, which is of a confidential nature relating to Aleris, the Company or its affiliates, or, without limitation, relating to its or their methods of distribution, or any description of any formulas or secret processes and will return any such information (in whatever form) then in his possession. (d) The Executive hereby agrees not to defame or disparage Aleris, the Company, its affiliates and their officers, directors, members or executives. The Executive hereby agrees to cooperate with Aleris, the Company and its affiliates in refuting any defamatory or disparaging remarks by any third party made in respect of Aleris, the Company or its affiliates or their directors, members, officers or executives.""",
-                     """reason, the Employee shall not directly or indirectly do any of the following without the consent of a Company executive, ratified by the Board of Directors: 8.2.1 Solicit or accept any business similar to that provided by the Company from a person, firm or corporation that is a customer of the Company during the time the Employee is employed by the Company; and""",
-                     """8.1 The Employee, recognizing the high level of trust and authority and the unique access to Company Proprietary Information to which he is being afforded by the Company, in exchange covenants and agrees that he will not during the term of employment and for a period of one year thereafter, on behalf of himself or on behalf of any other person or business entity or enterprise directly or indirectly as an employee, proprietor, stockholder, partner, consultant or otherwise, engage in any business or activity competitive with the business activities or the Company or its affiliates as they now are or hereafter undertaken by the Company.""",
-                     """(a) Employee acknowledges that in the course of her employment by the Company he has and will become privy to various economic and trade secrets and relationships of the Company and its subsidiaries under its direct control ("Subsidiaries"). Therefore, in consideration of this Agreement, Employee hereby agrees that he will not, directly or indirectly, except for the benefit of the Company or its Subsidiaries, or with the prior written consent of the Board of Directors of the Company, which consent may be granted or withheld at the sole discretion of the Company's Board of Directors: (i) During the Noncompetition Period (as hereinafter defined), become an officer, director, stockholder, partner, member, manager, associate, employee, owner, creditor, independent contractor, co- venturer, consultant or otherwise, or be interested in or associated with any other person, corporation, firm or business engaged in providing software solutions services, including but not limited to, systems integration, custom software development, training, systems support, outsourcing and/or information technology consulting services (an "Edgewater Services Business") within a radius of fifty (50) miles from any office operated during the Noncompetition Period by the Company, or any of its Subsidiaries (collectively, the "Territory") or in any Edgewater Services Business directly competitive with that of the Company, or any of its Subsidiaries, or itself engage in such business; provided, however, that"""]
-
+non_compete_positive_words=["compet", "noncompetit"]
+non_compete_negative_words=[]
 #TODO Should return a flag if find more than one of anything and add some kind of "conflicting" flag for every employee value so user knows suspicious values
 
 # Employee or Executive is found as a definition in the sentence
@@ -44,10 +43,13 @@ def get_employee_name(text, return_source=False):
             for c in companies:
                 # persons and companies return slightly different values for same text
                 # so need to standardize to compare
-                if(len(c)>1):
-                    company_full_string = str(c[0].lower().strip(string.punctuation).replace(" ", "").replace(",", "")
-                                              + c[1].lower().strip(string.punctuation).replace(" ", "").replace(",",
-                                                                                                                ""))
+                if len(c)>0:
+                    if(c[1] is not None and c[0] is not None):
+                        company_full_string = str(c[0].lower().strip(string.punctuation).replace(" ", "").replace(",", "")
+                                              + c[1].lower().strip(string.punctuation).replace(" ", "").replace(",",""))
+                    else:
+                        company_full_string=str(c[0].lower().strip(string.punctuation).replace(" ", "").replace(",", ""))
+
                     employee_full_string = str(p.lower().strip(string.punctuation).replace(" ", "").replace(",", ""))
                     if (employee_full_string == company_full_string or
                         #handle this- where get_companies picks up more surrounding text than get_persons: EMPLOYMENT AGREEMENT WHEREAS, Kensey Nash Corporation, a Delaware corporation (the “Company”) and Todd M. DeWitt (the “Executive”) entered into that certain Amended and Restated Employment Agreement,...
@@ -138,18 +140,43 @@ def get_effective_date(text, return_source=False, return_conflict=False):
         return(effective_date)
 
 
-#def check_is_non_compete(text_unit, sample_set=non_compete_samples, similarity_threshold=.75):
+def get_similar_to_non_compete(text, non_compete_positives=non_compete_positive_words,
+                         non_compete_negatives=non_compete_negative_words):
+    stems = get_stems(text)
+    positive_found=False
+    negative_found=False
+    dir_path = os.path.dirname(os.path.realpath(__file__))
 
+
+
+    for p in non_compete_positive_words:
+        if p in stems:
+            positive_found=True
+    if positive_found:
+        for n in non_compete_negative_words:
+            if n in stems:
+                negative_found=True
+    if positive_found and not negative_found:
+        return 1
+
+    w2v_model = gensim.models.word2vec.Word2Vec.load(dir_path+ "/w2v_cbow_employment_size200_window10")
+    trained_similar_words= w2v_model.wv.most_similar(positive=non_compete_positives,
+                                                     negative=non_compete_negatives)
+
+    trained_similar_words= dict(trained_similar_words)
+
+    sum_similarity=0
+    num_similars=0
+    for i in stems:
+        if trained_similar_words.get(i) is not None:
+            sum_similarity= sum_similarity+ trained_similar_words[i]
+            num_similars=num_similars+1
+    if num_similars is not 0:
+        return sum_similarity/num_similars
+    else:
+        return 0
 #TODO See if there is a better way than copying text unit similariy- see tasks-tasks.py-similarity
 
 def findWholeWordorPhrase(w):
     w = w.replace(" ", r"\s+")
     return re.compile(r'\b({0})\b'.format(w), flags=re.IGNORECASE).search
-
-#text="""EMPLOYMENT AGREEMENT WHEREAS, Kensey Nash Corporation,
-#a Delaware corporation (the “Company”) and Todd M. DeWitt (the “Executive”)
-#entered into that certain Amended and Restated Employment Agreement, entered into as of January 1, 2009
-#(as amended, restated, supplemented, extended or otherwise modified and in effect, the “Agreement”);"""
-#result= get_employee_name(text)
-##annual_salary=result[0][0] * result[1]
-#print(result, type(result))

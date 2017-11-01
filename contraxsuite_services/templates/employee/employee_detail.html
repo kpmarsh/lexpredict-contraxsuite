@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static pipeline %}
+
+{% block css_extra %}
+  {% stylesheet 'custom_jqwidgets_css' %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.1.1/jquery-confirm.min.css">
+  {{ block.super }}
+{% endblock %}
+
+{% block Title %}Employee Detail View{% endblock %}
+
+{% block page_header %}Employee Detail View{% endblock %}
+
+{% block content %}
+    <h3>Employee</h3>
+  <table class="table table-bordered table-striped">
+    <thead class="thead-inverse">
+    <tr>
+      <th>Name</th>
+      <th>Annual Salary</th>
+      <th>Currency</th>
+      <th>Employer Name</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+      <td>{{ employee.name }}</td>
+      <td>{{ employee.annual_salary }}</td>
+      <td>{{ employee.salary_currency }}</td>
+      <td>{{ employee.employer.name }}</td>
+    </tr>
+    </tbody>
+  </table>
+{% endblock %}

@@ -15,9 +15,7 @@
         {name: 'salary_currency', type: 'string'},
         { name: 'effective_date', type: 'date' },
         { name: 'employer__name', type: 'string' },
-        { name: 'document_url', type: 'string' },
-          {name: 'url' , type: 'string'},
-        { name: 'employee_url', type: 'string' }
+          {name: 'url' , type: 'string'}
       ];
       var menu_renderer = function(row, event) {
         var grid = $(event.currentTarget).parents('.jqxgrid');
@@ -26,7 +24,7 @@
           {url: row.url,
             icon: 'fa fa-file-text-o',
             text: 'View Document'},
-          {url: row.employee_url,
+          {url: row.detail_url,
             icon: 'fa fa-user',
             text: 'View Employee'},
         ];
@@ -39,8 +37,7 @@
         { text: 'Type', datafield: 'document__document_type', width: 100,
           align: 'center', cellsalign: 'center', columngroup: 'Document' },
         { text: 'Employee', datafield: 'name', width: 'auto',
-          align: 'center', cellsalign: 'left', enabletooltips: true,
-          cellsrenderer: defaultLinkFormatter},
+          align: 'center', cellsalign: 'left', enabletooltips: true},
         { text: 'Annual Salary', datafield: 'annual_salary', width: 100,
           align: 'center', cellsalign: 'center' },
           {text: 'Currency', datafield: 'salary_currency', width:100,

@@ -1,5 +1,6 @@
 from django.db import models
 from apps.document.models import Document
+from apps.extract.models import Usage
 
 
 
@@ -7,10 +8,12 @@ class Employer(models.Model):
 
     name = models.CharField(max_length=1024, db_index=True)
 
+class EmployerUsage(Usage):
 
-    def __str__(self):
-        return "Employer: %s" % self.name
+    employer= models.ForeignKey(Employer, db_index=True)
 
+    class Meta:
+        ordering=['-count']
 
 class Employee(models.Model):
 
@@ -25,6 +28,7 @@ class Employee(models.Model):
     class Meta:
         unique_together=(("name", "document"),)
         verbose_name_plural='Employees'
+        ordering = ('name',)
 
 
     def __str__(self):
