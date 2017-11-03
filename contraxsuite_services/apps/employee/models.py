@@ -23,6 +23,7 @@ class Employee(models.Model):
     annual_salary= models.FloatField(blank=True, null=True)
     salary_currency= models.CharField(max_length=10, blank=True, null=True)
     effective_date= models.DateField(blank=True, null=True)
+    has_noncompete= models.BooleanField(default=False)
 
 
     class Meta:
@@ -40,9 +41,11 @@ class Employee(models.Model):
 
 
 
-class Noncompete_Provision:
+class Noncompete_Provision(models.Model):
 
     text_unit= models.TextField(max_length=16384)
     similarity=models.DecimalField(max_digits=5, decimal_places=2)
     employee = models.ForeignKey(Employee)
     document=models.ForeignKey(Document)
+
+

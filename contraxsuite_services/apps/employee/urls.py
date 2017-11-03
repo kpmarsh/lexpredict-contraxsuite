@@ -48,5 +48,10 @@ urlpatterns += [
         views.EmployerUsageListView.as_view(),
         name='employer-usage-list',
     ),
+    url(
+        r'^employee-noncompete-provision/$',
+        views.NoncompeteProvisionListView.as_view(),
+        name='noncompete-provision-list',
+    ),
 
 ]

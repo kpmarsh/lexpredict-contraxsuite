@@ -2310,6 +2310,8 @@ class LocateEmployees(BaseTask):
                 )
 
         if len(non_compete_list)>0 and employee is not None:
+            employee.has_noncompete= True
+            employee.save()
             for i in non_compete_list:
                 non_compete, non_compete_created = Noncompete_Provision.objects.get_or_create(
                     text_unit=i["text_unit"],

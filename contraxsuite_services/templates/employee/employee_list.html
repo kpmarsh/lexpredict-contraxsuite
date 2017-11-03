@@ -15,7 +15,9 @@
         {name: 'salary_currency', type: 'string'},
         { name: 'effective_date', type: 'date' },
         { name: 'employer__name', type: 'string' },
-          {name: 'url' , type: 'string'}
+          {name: 'has_noncompete', type:'string'},
+          {name: 'url' , type: 'string'},
+          {name: 'detail_url', type:'string'}
       ];
       var menu_renderer = function(row, event) {
         var grid = $(event.currentTarget).parents('.jqxgrid');
@@ -45,6 +47,12 @@
         { text: 'Employer Name', datafield: 'employer__name',
           width: 200, enabletooltips: true,
           align: 'center', cellsalign: 'center' },
+          { text: 'Has Non-Compete', datafield: 'has_noncompete',
+          width: 60, enabletooltips: true,
+          align: 'center', cellsalign: 'center' },
+          {text: 'Effective Date', datafield: 'effective_date', width: 60,
+          enabletooltips:true, align: 'center', cellsalign: 'center',
+              format: 'yyyy-MM-dd', cellsformat: 'yyyy-MM-dd'},
         { text: 'Action', datafield: 'url', width: 60,
           align: 'center', exportable: false,
           columntype: 'button',

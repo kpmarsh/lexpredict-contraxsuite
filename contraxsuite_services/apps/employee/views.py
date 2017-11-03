@@ -26,7 +26,7 @@ from apps.common.mixins import (
     AjaxListView, AjaxResponseMixin, JqPaginatedListView, TypeaheadView)
 from apps.document.models import Document
 from apps.employee.models import (
-    Employee, Employer, EmployerUsage)
+    Employee, Employer, EmployerUsage, Noncompete_Provision)
 from apps.task.views import BaseAjaxTaskView, LocateTaskView
 from apps.task.models import Task
 from apps.task.tasks import call_task, clean_tasks, purge_task
@@ -46,7 +46,7 @@ class EmployeeListView(JqPaginatedListView):
     model = Employee
     json_fields = ['document__pk', 'document__name', 'document__description',
                    'document__document_type', 'name', 'annual_salary', 'salary_currency', 'effective_date',
-                   'employer__name']
+                   'employer__name', 'pk', 'has_noncompete']
     field_types = dict(count=int)
 
     def get_json_data(self, **kwargs):
@@ -67,6 +67,21 @@ class EmployeeListView(JqPaginatedListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['employee_search'] = self.request.GET.get("employee_search", "")
+        return ctx
+
+class NoncompeteProvisionListView(JqPaginatedListView):
+    model = Noncompete_Provision
+    template_name="employee/noncompete_list.html"
+    json_fields = [ 'text_unit', 'similarity', 'employee__name', 'employee__pk',
+                    'document__pk', 'document__name']
+    field_types = dict(count=int)
+
+    def get_json_data(self, **kwargs):
+        data = super().get_json_data()
+        return data
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
         return ctx
 
 
@@ -90,6 +105,4 @@ class EmployeeDetailView(PermissionRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        employee = self.object
-
         return ctx

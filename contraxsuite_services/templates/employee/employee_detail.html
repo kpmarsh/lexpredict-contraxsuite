@@ -20,6 +20,7 @@
       <th>Annual Salary</th>
       <th>Currency</th>
       <th>Employer Name</th>
+        <th>Effective Date</th>
     </tr>
     </thead>
     <tbody>
@@ -28,7 +29,59 @@
       <td>{{ employee.annual_salary }}</td>
       <td>{{ employee.salary_currency }}</td>
       <td>{{ employee.employer.name }}</td>
+        <td>{{ employee.effective_date }}</td>
     </tr>
     </tbody>
   </table>
+    <div class="tabs tabs-bb clearfix page-tabs" id="tabs1" data-speed="700" data-active="1"
+       style="margin-top: 50px;">
+
+        <ul class="tab-nav clearfix mb-10">
+          <li><a href="#tab-1">Non-Compete<span class="badge badge-s pull-right noncompetes-badge"></span></a></li>
+          <li><a href="#tab-2">Termination<span></span></a></li>
+        </ul>
+        <div class="tab-content clearfix" id="tab-1">
+          <div class="pull-right grid-controls">
+            {% include '_base_grid_buttons_block.html' %}
+          </div>
+          <div class="jqxgrid-container">
+            <div class="jqxgrid col-md-12 jqxgrid-noncompetes"></div>
+          </div>
+        </div>
+        <div class="tab-content clearfix" id="tab-2">
+        </div>
+    </div>
+{% endblock %}
+
+{% block js_extra %}
+  {% include "_base_jqxgrid_block.html" %}
+
+<script type="text/javascript">
+     $(document).ready(function () {
+      // noncompete table
+      var noncompete_datafields = [
+        { name: 'text_unit', type: 'string' },
+        { name: 'similarity', type: 'string' },
+          {name: 'employee_id', type: 'int' }
+      ];
+
+      var noncompete_columns = [
+        { text: 'Provision', datafield: 'text_unit', width: 'auto',
+          align: 'center', cellsalign: 'center' },
+        { text: 'Confidence', datafield: 'similarity', width: 'auto',
+          align: 'center', cellsalign: 'center'}
+      ];
+
+      var noncompete_custom_source_data = {
+        url: '{% url "employee:noncompete-provision-list" %}',
+        data: { 'employee_pk': {{ employee.pk }} },
+          badgeClass: 'noncompetes-badge'
+      };
+
+      draw_grid(".jqxgrid-noncompetes", noncompete_datafields, noncompete_columns, false,
+          noncompete_custom_source_data)    ;
+
+     });
+</script>
+
 {% endblock %}

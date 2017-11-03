@@ -18,7 +18,11 @@ from django.conf import settings
 
 TRIGGER_LIST_COMPANY = ["corporation", "company", "employer"]
 TRIGGER_LIST_EMPLOYEE = ["employee", "executive"]
-non_compete_positive_words=["compet", "noncompetit"]
+FALSE_PEOPLE=["agreement", "addendum"] #get_persons wrongly returns a bunch of these - exclude for now. TODO as about if can improve get_persons
+
+#below words determine if it is definately a non-compete or definately not a non-compete
+# and are used to fetch similar words via w2v
+non_compete_positive_words=["competit", "noncompetit"]
 non_compete_negative_words=[]
 #TODO Should return a flag if find more than one of anything and add some kind of "conflicting" flag for every employee value so user knows suspicious values
 
@@ -40,22 +44,24 @@ def get_employee_name(text, return_source=False):
         companies = list(get_companies(text))
         for p in persons:
             person_is_a_company = False
-            for c in companies:
-                # persons and companies return slightly different values for same text
-                # so need to standardize to compare
-                if len(c)>0:
-                    if(c[1] is not None and c[0] is not None):
-                        company_full_string = str(c[0].lower().strip(string.punctuation).replace(" ", "").replace(",", "")
-                                              + c[1].lower().strip(string.punctuation).replace(" ", "").replace(",",""))
-                    else:
-                        company_full_string=str(c[0].lower().strip(string.punctuation).replace(" ", "").replace(",", ""))
+            fake_person= str(p).lower() in FALSE_PEOPLE
+            if not fake_person:
+                for c in companies:
+                    # persons and companies return slightly different values for same text
+                    # so need to standardize to compare
+                    if len(c)>0:
+                        if(c[1] is not None and c[0] is not None):
+                            company_full_string = str(c[0].lower().strip(string.punctuation).replace(" ", "").replace(",", "")
+                                                  + c[1].lower().strip(string.punctuation).replace(" ", "").replace(",",""))
+                        else:
+                            company_full_string=str(c[0].lower().strip(string.punctuation).replace(" ", "").replace(",", ""))
 
-                    employee_full_string = str(p.lower().strip(string.punctuation).replace(" ", "").replace(",", ""))
-                    if (employee_full_string == company_full_string or
-                        #handle this- where get_companies picks up more surrounding text than get_persons: EMPLOYMENT AGREEMENT WHEREAS, Kensey Nash Corporation, a Delaware corporation (the “Company”) and Todd M. DeWitt (the “Executive”) entered into that certain Amended and Restated Employment Agreement,...
-                        employee_full_string in company_full_string):
-                            person_is_a_company = True
-            if (not person_is_a_company):
+                        employee_full_string = str(p.lower().strip(string.punctuation).replace(" ", "").replace(",", ""))
+                        if (employee_full_string == company_full_string or
+                            #handle this- where get_companies picks up more surrounding text than get_persons: EMPLOYMENT AGREEMENT WHEREAS, Kensey Nash Corporation, a Delaware corporation (the “Company”) and Todd M. DeWitt (the “Executive”) entered into that certain Amended and Restated Employment Agreement,...
+                            employee_full_string in company_full_string):
+                                person_is_a_company = True
+            if (not person_is_a_company and not fake_person):
                 found_employee=str(p)
                 break #take first person found meeting our employee criteria
 
@@ -175,7 +181,6 @@ def get_similar_to_non_compete(text, non_compete_positives=non_compete_positive_
         return sum_similarity/num_similars
     else:
         return 0
-#TODO See if there is a better way than copying text unit similariy- see tasks-tasks.py-similarity
 
 def findWholeWordorPhrase(w):
     w = w.replace(" ", r"\s+")
