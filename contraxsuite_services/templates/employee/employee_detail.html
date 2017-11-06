@@ -68,18 +68,20 @@
       var noncompete_columns = [
         { text: 'Provision', datafield: 'text_unit', width: 'auto',
           align: 'center', cellsalign: 'center' },
-        { text: 'Confidence', datafield: 'similarity', width: 'auto',
+        { text: 'Confidence', datafield: 'similarity', width: '100',
           align: 'center', cellsalign: 'center'}
       ];
 
       var noncompete_custom_source_data = {
         url: '{% url "employee:noncompete-provision-list" %}',
-        data: { 'employee_pk': {{ employee.pk }} },
+        data: { 'employee__pk': {{ employee.pk }} },
           badgeClass: 'noncompetes-badge'
       };
 
+      var custom_grid_options= { autorowheight: true}
+
       draw_grid(".jqxgrid-noncompetes", noncompete_datafields, noncompete_columns, false,
-          noncompete_custom_source_data)    ;
+          noncompete_custom_source_data, custom_grid_options);
 
      });
 </script>

@@ -84,6 +84,12 @@ class NoncompeteProvisionListView(JqPaginatedListView):
         ctx = super().get_context_data(**kwargs)
         return ctx
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if "employee__pk" in self.request.GET:
+            qs = qs.filter(employee__pk =self.request.GET['employee__pk'])
+        return qs
+
 
 class EmployerUsageListView(JqPaginatedListView):
     model = EmployerUsage
