@@ -68,8 +68,9 @@ from apps.extract.models import (
     Court, CourtUsage, CurrencyUsage, RegulationUsage,
     CitationUsage, DateDurationUsage, DateUsage, DefinitionUsage)
 
-from apps.employee.models import Employee, Employer, Noncompete_Provision
-from apps.employee.services import get_employee_name, get_employer_name, get_salary, get_effective_date, get_similar_to_non_compete
+from apps.employee.models import Employee, Employer, Provision
+from apps.employee.services import get_employee_name, get_employer_name, get_salary,\
+    get_effective_date, get_similar_to_non_compete, get_similar_to_termination
 
 from apps.task.celery import app
 from apps.task.models import Task
@@ -2234,9 +2235,6 @@ class Similarity(BaseTask):
                     self.task.push()
 
 
-TRIGGER_LIST_COMPANY = ["corporation", "company", "employer"]
-TRIGGER_LIST_EMPLOYEE = ["employee", "executive"]
-
 
 class LocateEmployees(BaseTask):
     """
@@ -2254,7 +2252,7 @@ class LocateEmployees(BaseTask):
         :return:
         """
         if kwargs['delete']:
-            deleted = Employee.objects.all().delete() + Employer.objects.all().delete() + Noncompete_Provision.objects.all().delete()
+            deleted = Employee.objects.all().delete() + Employer.objects.all().delete() + Provision.objects.all().delete()
             self.log('Deleted: ' + str(deleted))
 
         self.task.subtasks_total = Document.objects.count()
@@ -2270,7 +2268,7 @@ class LocateEmployees(BaseTask):
     def parse_document_for_employee(document_id):
 
         employee_dict= {}
-        non_compete_list=[]
+        provisions=[]
 
         for t in TextUnit.objects.filter(document_id=document_id, unit_type="paragraph").all():
             text = t.text
@@ -2294,9 +2292,12 @@ class LocateEmployees(BaseTask):
                 employee_dict['effective_date'] = get_effective_date(text)
 
             non_compete_similarity=get_similar_to_non_compete(text)
-            if non_compete_similarity >.75:
-                non_compete_list.append({"text_unit":text, "similarity":non_compete_similarity})
+            if non_compete_similarity >.5:
+                provisions.append({"text_unit":text, "similarity":non_compete_similarity, "type": "noncompete"})
 
+            termination_similarity=get_similar_to_termination(text)
+            if termination_similarity >.5:
+                provisions.append({"text_unit":text, "similarity":termination_similarity, "type": "termination"})
 
         employee = employer = None
         # create Employee only if his/her name exists
@@ -2309,16 +2310,25 @@ class LocateEmployees(BaseTask):
                 document= Document.objects.get(pk=document_id)
                 )
 
-        if len(non_compete_list)>0 and employee is not None:
-            employee.has_noncompete= True
-            employee.save()
-            for i in non_compete_list:
-                non_compete, non_compete_created = Noncompete_Provision.objects.get_or_create(
+        if len(provisions)>0 and employee is not None:
+            noncompete_found=False
+            termination_found=False
+
+            for i in provisions:
+                if i["type"]=="noncompete":
+                    noncompete_found=True
+                if i["type"]=="termination":
+                    termination_found=True
+                provision, provision_created = Provision.objects.get_or_create(
                     text_unit=i["text_unit"],
                     similarity=i["similarity"],
                     employee=employee,
-                    document=Document.objects.get(pk=document_id)
+                    document=Document.objects.get(pk=document_id),
+                    type= i["type"]
                 )
+            employee.has_noncompete= noncompete_found
+            employee.has_termination=termination_found
+            employee.save()
 
         # create Employer
         if employee and employee_dict.get('employer') is not None:

@@ -20,11 +20,14 @@ TRIGGER_LIST_COMPANY = ["corporation", "company", "employer"]
 TRIGGER_LIST_EMPLOYEE = ["employee", "executive"]
 FALSE_PEOPLE=["agreement", "addendum"] #get_persons wrongly returns a bunch of these - exclude for now. TODO as about if can improve get_persons
 
-#below words determine if it is definately a non-compete or definately not a non-compete
+#below words determine if it is definately a non-compete/termination or definately not a non-compete/termination
 # and are used to fetch similar words via w2v
 non_compete_positive_words=["competit", "noncompetit"]
 non_compete_negative_words=[]
-#TODO Should return a flag if find more than one of anything and add some kind of "conflicting" flag for every employee value so user knows suspicious values
+termination_positive_words=["termin"]
+termination_negative_words=[]
+
+
 
 # Employee or Executive is found as a definition in the sentence
 # there is a person (get_persons) who is not also a company - that is the employee
@@ -145,9 +148,9 @@ def get_effective_date(text, return_source=False, return_conflict=False):
     else:
         return(effective_date)
 
-
-def get_similar_to_non_compete(text, non_compete_positives=non_compete_positive_words,
-                         non_compete_negatives=non_compete_negative_words):
+def get_similar_to_terms_employee(text, positives,
+                         negatives):
+    """Use Employment Agreement W2V to get terms similar to those provided and search text for those"""
     stems = get_stems(text)
     positive_found=False
     negative_found=False
@@ -155,19 +158,19 @@ def get_similar_to_non_compete(text, non_compete_positives=non_compete_positive_
 
 
 
-    for p in non_compete_positive_words:
+    for p in positives:
         if p in stems:
             positive_found=True
     if positive_found:
-        for n in non_compete_negative_words:
+        for n in negatives:
             if n in stems:
                 negative_found=True
     if positive_found and not negative_found:
         return 1
 
     w2v_model = gensim.models.word2vec.Word2Vec.load(dir_path+ "/w2v_cbow_employment_size200_window10")
-    trained_similar_words= w2v_model.wv.most_similar(positive=non_compete_positives,
-                                                     negative=non_compete_negatives)
+    trained_similar_words= w2v_model.wv.most_similar(positive=positives,
+                                                     negative=negatives)
 
     trained_similar_words= dict(trained_similar_words)
 
@@ -181,6 +184,14 @@ def get_similar_to_non_compete(text, non_compete_positives=non_compete_positive_
         return sum_similarity/num_similars
     else:
         return 0
+
+def get_similar_to_non_compete(text, non_compete_positives=non_compete_positive_words,
+                         non_compete_negatives=non_compete_negative_words):
+    return get_similar_to_terms_employee(text, non_compete_positives, non_compete_negatives)
+
+def get_similar_to_termination(text, termination_positives=termination_positive_words,
+                         termination_negatives=termination_negative_words):
+    return get_similar_to_terms_employee(text, termination_positives, termination_negatives)
 
 def findWholeWordorPhrase(w):
     w = w.replace(" ", r"\s+")

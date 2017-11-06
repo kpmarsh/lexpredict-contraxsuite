@@ -26,7 +26,7 @@ from apps.common.mixins import (
     AjaxListView, AjaxResponseMixin, JqPaginatedListView, TypeaheadView)
 from apps.document.models import Document
 from apps.employee.models import (
-    Employee, Employer, EmployerUsage, Noncompete_Provision)
+    Employee, Employer, EmployerUsage, Provision)
 from apps.task.views import BaseAjaxTaskView, LocateTaskView
 from apps.task.models import Task
 from apps.task.tasks import call_task, clean_tasks, purge_task
@@ -69,10 +69,10 @@ class EmployeeListView(JqPaginatedListView):
         ctx['employee_search'] = self.request.GET.get("employee_search", "")
         return ctx
 
-class NoncompeteProvisionListView(JqPaginatedListView):
-    model = Noncompete_Provision
-    template_name="employee/noncompete_list.html"
-    json_fields = [ 'text_unit', 'similarity', 'employee__name', 'employee__pk',
+class ProvisionListView(JqPaginatedListView):
+    model = Provision
+    template_name="employee/provision_list.html"
+    json_fields = [ 'text_unit', 'similarity', 'type','employee__name', 'employee__pk',
                     'document__pk', 'document__name']
     field_types = dict(count=int)
 
@@ -88,6 +88,8 @@ class NoncompeteProvisionListView(JqPaginatedListView):
         qs = super().get_queryset()
         if "employee__pk" in self.request.GET:
             qs = qs.filter(employee__pk =self.request.GET['employee__pk'])
+        if "type" in self.request.GET:
+            qs=qs.filter(type= self.request.GET['type'])
         return qs
 
 
