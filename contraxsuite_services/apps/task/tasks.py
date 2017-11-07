@@ -70,7 +70,7 @@ from apps.extract.models import (
 
 from apps.employee.models import Employee, Employer, Provision
 from apps.employee.services import get_employee_name, get_employer_name, get_salary,\
-    get_effective_date, get_similar_to_non_compete, get_similar_to_termination
+    get_effective_date, get_similar_to_non_compete, get_similar_to_termination, get_vacation_duration
 
 from apps.task.celery import app
 from apps.task.models import Task
@@ -2290,6 +2290,11 @@ class LocateEmployees(BaseTask):
                     employee_dict['salary_currency'] = get_salary_result[0][1]
             if employee_dict.get('effective_date') is None:
                 employee_dict['effective_date'] = get_effective_date(text)
+            if employee_dict.get('vacation') is None:
+                get_vacation_result= get_vacation_duration(text)
+                if get_vacation_result is not None:
+                    yearly_amount= get_vacation_result[0][1]*get_vacation_result[1]
+                    employee_dict['vacation']= str(yearly_amount) + " " + str(get_vacation_result[0][0])+"s"
 
             non_compete_similarity=get_similar_to_non_compete(text)
             if non_compete_similarity >.5:
@@ -2307,6 +2312,7 @@ class LocateEmployees(BaseTask):
                 annual_salary=employee_dict.get('annual_salary'),
                 salary_currency=employee_dict.get('salary_currency'),
                 effective_date= employee_dict.get('effective_date'),
+                vacation_yearly= employee_dict.get('vacation'),
                 document= Document.objects.get(pk=document_id)
                 )
 

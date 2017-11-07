@@ -13,12 +13,19 @@
 
 {% block content %}
     <h3>Employee</h3>
+      <div>
+        <a class="btn-u btn-sm" id="button_view_raw_document"
+       href="{% url "document:document-detail" employee.document.id %}" target="_blank">
+      View Document Detail
+        </a>
+  </div>
   <table class="table table-bordered table-striped">
     <thead class="thead-inverse">
     <tr>
       <th>Name</th>
       <th>Annual Salary</th>
       <th>Currency</th>
+        <th>Annual Vacation</th>
       <th>Employer Name</th>
         <th>Effective Date</th>
     </tr>
@@ -28,6 +35,7 @@
       <td>{{ employee.name }}</td>
       <td>{{ employee.annual_salary }}</td>
       <td>{{ employee.salary_currency }}</td>
+        <td>{{ employee.vacation_yearly }}</td>
       <td>{{ employee.employer.name }}</td>
         <td>{{ employee.effective_date }}</td>
     </tr>

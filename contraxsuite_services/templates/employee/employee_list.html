@@ -18,7 +18,8 @@
           {name: 'has_noncompete', type:'string'},
           {name: 'has_termination', type:'string'},
           {name: 'url' , type: 'string'},
-          {name: 'detail_url', type:'string'}
+          {name: 'detail_url', type:'string'},
+          {name: 'vacation_yearly', type:'string'}
       ];
       var menu_renderer = function(row, event) {
         var grid = $(event.currentTarget).parents('.jqxgrid');
@@ -34,18 +35,20 @@
         show_menu(menu_data, grid, row.pk);
       };
       var columns = [
-        { text: 'Name', datafield: 'document__name',
+          { text: 'Name', datafield: 'document__name',
           align: 'center', cellsalign: 'left', enabletooltips: true,
           cellsrenderer: defaultLinkFormatter, columngroup: 'Document' },
-        { text: 'Type', datafield: 'document__document_type',
+          { text: 'Type', datafield: 'document__document_type',
           align: 'center', cellsalign: 'center', columngroup: 'Document' },
-        { text: 'Employee', datafield: 'name',
+          { text: 'Employee', datafield: 'name',
           align: 'center', cellsalign: 'left', enabletooltips: true},
-        { text: 'Annual Salary', datafield: 'annual_salary',
+          { text: 'Annual Salary', datafield: 'annual_salary',
           align: 'center', cellsalign: 'center', width: 100 },
           {text: 'Currency', datafield: 'salary_currency',
           align: 'center', cellsalign:'left', enabletooltips: true},
-        { text: 'Employer Name', datafield: 'employer__name',
+          { text: 'Annual vacation', datafield: 'vacation_yearly',
+          align: 'center', cellsalign: 'center', width: 100 },
+          { text: 'Employer Name', datafield: 'employer__name',
            enabletooltips: true,
           align: 'center', cellsalign: 'center' },
           { text: 'Non-Compete', datafield: 'has_noncompete',
@@ -57,7 +60,7 @@
           {text: 'Effective Date', datafield: 'effective_date', width: 100,
           enabletooltips:true, align: 'center', cellsalign: 'center',
               format: 'yyyy-MM-dd', cellsformat: 'yyyy-MM-dd'},
-        { text: 'Action', datafield: 'url', width: 60,
+          { text: 'Action', datafield: 'url', width: 60,
           align: 'center', exportable: false,
           columntype: 'button',
           sortable: false, filterable: false, menu: false,

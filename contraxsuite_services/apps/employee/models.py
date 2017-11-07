@@ -22,6 +22,7 @@ class Employee(models.Model):
     employer=models.ForeignKey(Employer, db_index=True, blank=True, null=True)
     annual_salary= models.FloatField(blank=True, null=True)
     salary_currency= models.CharField(max_length=10, blank=True, null=True)
+    vacation_yearly= models.CharField(max_length=1024, db_index=True, null=True)
     effective_date= models.DateField(blank=True, null=True)
     has_noncompete= models.BooleanField(default=False)
     has_termination=models.BooleanField(default=False)

@@ -7,7 +7,8 @@ import os
 from lexnlp.extract.en.definitions import get_definitions
 from lexnlp.extract.en.entities.nltk_maxent import get_companies, get_organizations, get_persons
 from lexnlp.extract.en.money import get_money
-from lexnlp.extract.en.dates import get_dates, get_date_features
+from lexnlp.extract.en.dates import get_dates
+from lexnlp.extract.en.durations import get_durations
 from lexnlp.extract.en.entities.nltk_re import get_parties_as
 from lexnlp.extract.en.utils import strip_unicode_punctuation
 from sklearn.metrics.pairwise import cosine_similarity
@@ -19,6 +20,8 @@ from django.conf import settings
 TRIGGER_LIST_COMPANY = ["corporation", "company", "employer"]
 TRIGGER_LIST_EMPLOYEE = ["employee", "executive"]
 FALSE_PEOPLE=["agreement", "addendum"] #get_persons wrongly returns a bunch of these - exclude for now. TODO as about if can improve get_persons
+TRIGGER_LIST_TIME_UNIT = [("per annum", 1), ("yearly", 1), ("per year", 1),
+                          ("bi-weekly", 26), ("monthly", 12), ("annually", 1), ("per month", 12)]
 
 #below words determine if it is definately a non-compete/termination or definately not a non-compete/termination
 # and are used to fetch similar words via w2v
@@ -26,6 +29,7 @@ non_compete_positive_words=["competit", "noncompetit"]
 non_compete_negative_words=[]
 termination_positive_words=["termin"]
 termination_negative_words=[]
+
 
 
 
@@ -77,7 +81,7 @@ def get_employee_name(text, return_source=False):
 # Case 1 Find definition of employee and employer in sentence return company found.
 # this doesn't handle more than one company in the same employee/employer definition sentence
 # First instance of this is fine since this is generally the first sentence
-def get_employer_name(text, return_source=False, return_conflict=False):
+def get_employer_name(text, return_source=False):
     definitions = list(get_definitions(text))
 
     companies = []
@@ -105,19 +109,17 @@ def get_employer_name(text, return_source=False, return_conflict=False):
 
 #TODO- group parts of sentence so can separate when it is like this:
 # "Your bi-weekly rate of pay will be $7,403.85, which is the equivalent of an annual rate of $192,500, based on a 40-hour workweek."
-def get_salary(text, return_source=False, return_conflict=False):
+def get_salary(text, return_source=False):
     TRIGGER_LIST_SALARY = ["salary", "rate of pay"]
     # text to be found and multiplier to get yearly
-    TRIGGER_LIST_TIME_UNIT = [("per annum", 1), ("yearly", 1), ("per year", 1),
-                              ("bi-weekly", 26), ("monthly", 12)]
-    found_time_unit = False
+    found_time_unit = None
     money=None
     for t in TRIGGER_LIST_TIME_UNIT:
         if (findWholeWordorPhrase(t[0])(text)) is not None:
             found_time_unit = t[1]
             break
 
-    if (found_time_unit):
+    if found_time_unit is not None:
         found_money= list(get_money(text))
         if(len(found_money)>0):
             money = found_money[0] #took just the first time unit- so also just take first money
@@ -126,8 +128,38 @@ def get_salary(text, return_source=False, return_conflict=False):
             return (money, found_time_unit, text)
         else:
             return (money, found_time_unit)
+    else:
+        return None
 
-def get_effective_date(text, return_source=False, return_conflict=False):
+#get duration- per unit- and the words "vacation" or "paid time off"
+def get_vacation_duration(text, return_source=False):
+    found_time_unit=None
+    duration=None
+    found_vacation_trigger=False
+    TRIGGER_LIST_VACATION= ["vacation", "paid time off"]
+    for v in TRIGGER_LIST_VACATION:
+        if(findWholeWordorPhrase(v)(text)) is not None:
+            found_vacation_trigger=True
+            break
+    if found_vacation_trigger:
+        for t in TRIGGER_LIST_TIME_UNIT:
+            if(findWholeWordorPhrase(t[0])(text)) is not None:
+                found_time_unit= t[1]
+                break
+        if found_time_unit is not None:
+            found_duration=list(get_durations(text))
+            if len(found_duration)>0:
+                duration=found_duration[0] #take first duration
+            if return_source:
+                return (duration, found_time_unit, text)
+            else:
+                return (duration, found_time_unit)
+    else:
+        return None
+
+
+
+def get_effective_date(text, return_source=False):
     # need a better more accurate way of doing this
     # right now looks for triggers and takes latest date in that sentence
     TRIGGER_LIST_START_DATE=["dated as of", "effective as of", "made as of", "entered into as of"]
@@ -196,3 +228,12 @@ def get_similar_to_termination(text, termination_positives=termination_positive_
 def findWholeWordorPhrase(w):
     w = w.replace(" ", r"\s+")
     return re.compile(r'\b({0})\b'.format(w), flags=re.IGNORECASE).search
+
+
+result= get_vacation_duration("""Employee shall be entitled to three weeks paid vacation annually, 
+and to accumulate unused vacation weeks to the end of this agreement.
+""")
+yearly_amount = result[0][1] * result[1]
+vacation = str(yearly_amount) + str(result[0][0]) + "s"
+
+print(str(yearly_amount) + " " +str(result[0][0])+"s")
