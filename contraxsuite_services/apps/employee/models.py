@@ -24,6 +24,7 @@ class Employee(models.Model):
     salary_currency= models.CharField(max_length=10, blank=True, null=True)
     vacation_yearly= models.CharField(max_length=1024, db_index=True, null=True)
     effective_date= models.DateField(blank=True, null=True)
+    governing_geo= models.CharField(max_length=1024, null=True, blank=True)
     has_noncompete= models.BooleanField(default=False)
     has_termination=models.BooleanField(default=False)
 

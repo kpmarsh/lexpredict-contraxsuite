@@ -5,7 +5,7 @@ import os
 
 # from lexnlp.extract.en.money import get_money
 from lexnlp.extract.en.definitions import get_definitions
-from lexnlp.extract.en.entities.nltk_maxent import get_companies, get_organizations, get_persons
+from lexnlp.extract.en.entities.nltk_maxent import get_companies, get_persons, get_geopolitical
 from lexnlp.extract.en.money import get_money
 from lexnlp.extract.en.dates import get_dates
 from lexnlp.extract.en.durations import get_durations
@@ -14,6 +14,7 @@ from lexnlp.extract.en.utils import strip_unicode_punctuation
 from sklearn.metrics.pairwise import cosine_similarity
 from lexnlp.nlp.en.tokens import get_stems
 from django.conf import settings
+
 
 
 
@@ -157,6 +158,24 @@ def get_vacation_duration(text, return_source=False):
     else:
         return None
 
+def get_governing_geo(text, return_source=False):
+    TRIGGER_lIST_GOVERNING=["governed by", "governing law"]
+    found_governing=False
+    geo_entity=None
+    for g in TRIGGER_lIST_GOVERNING:
+        if(findWholeWordorPhrase(g)(text)) is not None:
+            found_governing=True
+            break
+    if found_governing:
+        found_geo_entities= list(get_geopolitical(text))
+        if len(found_geo_entities)>0:
+            geo_entity= found_geo_entities[0] #take first geo_entity
+    if return_source:
+        return (geo_entity, text)
+    else:
+        return geo_entity
+
+
 
 
 def get_effective_date(text, return_source=False):
@@ -228,12 +247,3 @@ def get_similar_to_termination(text, termination_positives=termination_positive_
 def findWholeWordorPhrase(w):
     w = w.replace(" ", r"\s+")
     return re.compile(r'\b({0})\b'.format(w), flags=re.IGNORECASE).search
-
-
-result= get_vacation_duration("""Employee shall be entitled to three weeks paid vacation annually, 
-and to accumulate unused vacation weeks to the end of this agreement.
-""")
-yearly_amount = result[0][1] * result[1]
-vacation = str(yearly_amount) + str(result[0][0]) + "s"
-
-print(str(yearly_amount) + " " +str(result[0][0])+"s")
