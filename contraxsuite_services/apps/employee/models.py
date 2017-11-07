@@ -1,5 +1,5 @@
 from django.db import models
-from apps.document.models import Document
+from apps.document.models import Document, TextUnit
 from apps.extract.models import Usage
 
 
@@ -44,7 +44,7 @@ class Employee(models.Model):
 
 class Provision(models.Model):
 
-    text_unit= models.TextField(max_length=16384)
+    text_unit= models.ForeignKey(TextUnit)
     similarity=models.DecimalField(max_digits=5, decimal_places=2)
     employee = models.ForeignKey(Employee)
     document=models.ForeignKey(Document)

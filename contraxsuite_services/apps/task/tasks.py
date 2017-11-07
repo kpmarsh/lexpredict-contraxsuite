@@ -2293,11 +2293,11 @@ class LocateEmployees(BaseTask):
 
             non_compete_similarity=get_similar_to_non_compete(text)
             if non_compete_similarity >.5:
-                provisions.append({"text_unit":text, "similarity":non_compete_similarity, "type": "noncompete"})
+                provisions.append({"text_unit":t.id, "similarity":non_compete_similarity, "type": "noncompete"})
 
             termination_similarity=get_similar_to_termination(text)
             if termination_similarity >.5:
-                provisions.append({"text_unit":text, "similarity":termination_similarity, "type": "termination"})
+                provisions.append({"text_unit":t.id, "similarity":termination_similarity, "type": "termination"})
 
         employee = employer = None
         # create Employee only if his/her name exists
@@ -2320,7 +2320,7 @@ class LocateEmployees(BaseTask):
                 if i["type"]=="termination":
                     termination_found=True
                 provision, provision_created = Provision.objects.get_or_create(
-                    text_unit=i["text_unit"],
+                    text_unit=TextUnit.objects.get(pk=i["text_unit"]),
                     similarity=i["similarity"],
                     employee=employee,
                     document=Document.objects.get(pk=document_id),

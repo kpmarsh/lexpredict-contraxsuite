@@ -46,7 +46,7 @@ class EmployeeListView(JqPaginatedListView):
     model = Employee
     json_fields = ['document__pk', 'document__name', 'document__description',
                    'document__document_type', 'name', 'annual_salary', 'salary_currency', 'effective_date',
-                   'employer__name', 'pk', 'has_noncompete']
+                   'employer__name', 'pk', 'has_noncompete', 'has_termination']
     field_types = dict(count=int)
 
     def get_json_data(self, **kwargs):
@@ -72,12 +72,14 @@ class EmployeeListView(JqPaginatedListView):
 class ProvisionListView(JqPaginatedListView):
     model = Provision
     template_name="employee/provision_list.html"
-    json_fields = [ 'text_unit', 'similarity', 'type','employee__name', 'employee__pk',
+    json_fields = [ 'text_unit__text', 'text_unit__pk','similarity', 'type','employee__name', 'employee__pk',
                     'document__pk', 'document__name']
     field_types = dict(count=int)
 
     def get_json_data(self, **kwargs):
         data = super().get_json_data()
+        for item in data['data']:
+            item['detail_url'] = reverse('document:text-unit-detail', args=[item['text_unit__pk']])
         return data
 
     def get_context_data(self, **kwargs):
