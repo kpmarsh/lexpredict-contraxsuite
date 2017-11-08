@@ -12,7 +12,6 @@
 {% block page_header %}Employee Detail View{% endblock %}
 
 {% block content %}
-    <h3>Employee</h3>
       <div>
         <a class="btn-u btn-sm" id="button_view_raw_document"
        href="{% url "document:document-detail" employee.document.id %}" target="_blank">
@@ -48,21 +47,30 @@
        style="margin-top: 50px;">
 
         <ul class="tab-nav clearfix mb-10">
-          <li><a href="#tab-1">Non-Compete<span class="badge badge-s pull-right noncompetes-badge"></span></a></li>
-          <li><a href="#tab-2">Termination<span class="badge badge-s pull-right terminations-badge"></span></a></li>
+          <li><a href="#tab-1">Benefits<span class="badge badge-s pull-right benefits-badge"></span></a></li>
+          <li><a href="#tab-2">Non-Compete<span class="badge badge-s pull-right noncompetes-badge"></span></a></li>
+          <li><a href="#tab-3">Termination<span class="badge badge-s pull-right terminations-badge"></span></a></li>
         </ul>
         <div class="tab-content clearfix" id="tab-1">
           <div class="pull-right grid-controls">
             {% include '_base_grid_buttons_block.html' %}
           </div>
           <div class="jqxgrid-container">
-            <div class="jqxgrid col-md-12 jqxgrid-noncompetes needsmenu"></div>
+            <div class="jqxgrid col-md-12 jqxgrid-benefits needsmenu"></div>
           </div>
         </div>
         <div class="tab-content clearfix" id="tab-2">
             <div class="pull-right grid-controls">
             {% include '_base_grid_buttons_block.html' %}
           </div>
+          <div class="jqxgrid-container">
+            <div class="jqxgrid col-md-12 jqxgrid-noncompetes needsmenu"></div>
+          </div>
+        </div>
+        <div class="tab-content clearfix" id="tab-3">
+            <div class="pull-right grid-controls">
+            {% include '_base_grid_buttons_block.html' %}
+            </div>
           <div class="jqxgrid-container">
             <div class="jqxgrid col-md-12 jqxgrid-terminations needsmenu"></div>
           </div>
@@ -127,6 +135,16 @@
 
       draw_grid(".jqxgrid-terminations", provision_datafields, provision_columns, false,
           termination_custom_source_data, custom_grid_options);
+
+      // benefits table
+     var benefits_custom_source_data = {
+        url: '{% url "employee:provision-list" %}',
+        data: { 'employee__pk': {{ employee.pk }}, 'type': 'benefits' },
+          badgeClass: 'benefits-badge'
+      };
+
+      draw_grid(".jqxgrid-benefits", provision_datafields, provision_columns, false,
+          benefits_custom_source_data, custom_grid_options);
 
 
      });

@@ -27,6 +27,7 @@ class Employee(models.Model):
     governing_geo= models.CharField(max_length=1024, null=True, blank=True)
     has_noncompete= models.BooleanField(default=False)
     has_termination=models.BooleanField(default=False)
+    has_benefits=models.BooleanField(default=False)
 
 
     class Meta:
